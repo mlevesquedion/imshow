@@ -82,7 +82,7 @@ mod accumulator_tests {
     use super::*;
 
     #[test]
-    fn test_accumulator_starts_out_empty() {
+    fn test_new_is_empty() {
         let accumulator = PixelAccumulator::new();
         assert_eq!(0, accumulator.red);
         assert_eq!(0, accumulator.green);
