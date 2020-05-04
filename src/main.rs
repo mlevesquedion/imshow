@@ -26,7 +26,6 @@ fn main() {
         .get_matches();
 
     let path = matches.value_of("path").unwrap();
-
     let no_scroll = matches.is_present("no_scroll");
 
     let (width, height) = term_size::dimensions().unwrap();
