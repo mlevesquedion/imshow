@@ -6,6 +6,10 @@ mod utils;
 pub use utils::*;
 
 pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
+    render(mean_pixels(im, display_dimension))
+}
+
+fn mean_pixels(im: image::DynamicImage, display_dimension: usize) -> Vec<Vec<(u8, u8, u8)>> {
     let (im_width, im_height) = im.dimensions();
 
     let pixels_per_col = (im_width as f32 / display_dimension as f32).ceil() as usize;
@@ -20,8 +24,7 @@ pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
         }
         pixels.push(row_pixels);
     }
-
-    render(pixels)
+    pixels
 }
 
 fn render(pixels: Vec<Vec<(u8, u8, u8)>>) -> String {
