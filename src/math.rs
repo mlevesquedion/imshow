@@ -77,6 +77,17 @@ fn indices(lo: f64, hi: f64) -> Vec<usize> {
     indices
 }
 
+// used in tests
+#[allow(unused_macros)]
+macro_rules! assert_float_eq {
+    ($x:expr, $y:expr) => {
+        assert!(($x - $y).abs() <= f64::EPSILON)
+    };
+    ($x:expr, $y:expr, $message:expr) => {
+        assert!(($x - $y).abs() <= f64::EPSILON, $message)
+    };
+}
+
 #[test]
 fn test_linspace() {
     let steps: Vec<(f64, f64)> = linspace!(0.0, 10.0, 4).collect();
@@ -84,10 +95,23 @@ fn test_linspace() {
     assert_eq!(expected, steps);
 }
 
-#[test]
-fn test_normalized_by_sum() {
-    let values = vec![10.0, 40.0];
-    assert_eq!(vec![0.2, 0.8], normalized_by_sum(values));
+#[cfg(test)]
+mod normalized_by_sum_tests {
+    use super::*;
+
+    #[test]
+    fn test_sums_to_1() {
+        let sum = normalized_by_sum((0..20).map(|x| x as f64).collect())
+            .iter()
+            .sum::<f64>();
+        assert_float_eq!(1.0, sum, format!("1.0 != {}", sum));
+    }
+
+    #[test]
+    fn test_produces_correct_values() {
+        let values = vec![10.0, 40.0];
+        assert_eq!(vec![0.2, 0.8], normalized_by_sum(values));
+    }
 }
 
 #[test]
@@ -103,15 +127,6 @@ fn test_weights_and_indices_have_same_length() {
 #[cfg(test)]
 mod weights_tests {
     use super::*;
-
-    macro_rules! assert_float_eq {
-        ($x:expr, $y:expr) => {
-            assert!(($x - $y).abs() <= f64::EPSILON)
-        };
-        ($x:expr, $y:expr, $message:expr) => {
-            assert!(($x - $y).abs() <= f64::EPSILON, $message)
-        };
-    }
 
     #[test]
     fn test_gap_between_lo_and_hi_less_than_1() {

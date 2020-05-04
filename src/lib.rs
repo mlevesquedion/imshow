@@ -6,20 +6,23 @@ use image::GenericImageView;
 mod math;
 pub use math::*;
 
+pub fn show(im: image::DynamicImage, terminal_dimensions: Dimensions, vertical: bool) -> String {
+    let display_dimension = display_dimension(terminal_dimensions, vertical);
+    render(mean_pixels(im, display_dimension))
+}
+
 pub struct Dimensions {
     pub width: usize,
     pub height: usize,
 }
 
-pub fn show(im: image::DynamicImage, terminal: Dimensions, no_scroll: bool) -> String {
-    let display_dimension = if no_scroll {
+fn display_dimension(terminal: Dimensions, vertical: bool) -> usize {
+    if vertical {
         // terminal cells are about twice as high as they are wide
-        terminal.height * 2
+        (terminal.height * 2).min(terminal.width)
     } else {
         terminal.width
-    };
-
-    render(mean_pixels(im, display_dimension))
+    }
 }
 
 fn mean_pixels(im: image::DynamicImage, display_dimension: usize) -> Vec<Vec<(u8, u8, u8)>> {
@@ -98,7 +101,39 @@ impl FloatPixel {
 }
 
 #[cfg(test)]
-mod pixel_tests {
+mod display_dimension_tests {
+    use super::*;
+
+    #[test]
+    fn test_uses_terminal_width_when_not_vertical() {
+        let terminal_dimensions = Dimensions {
+            width: 10,
+            height: 20,
+        };
+        assert_eq!(10, display_dimension(terminal_dimensions, false));
+    }
+
+    #[test]
+    fn test_uses_twice_terminal_height_when_vertical() {
+        let terminal_dimensions = Dimensions {
+            width: 50,
+            height: 20,
+        };
+        assert_eq!(40, display_dimension(terminal_dimensions, true));
+    }
+
+    #[test]
+    fn test_uses_terminal_width_when_vertical_and_twice_terminal_height_is_greater_than_width() {
+        let terminal_dimensions = Dimensions {
+            width: 30,
+            height: 20,
+        };
+        assert_eq!(30, display_dimension(terminal_dimensions, true));
+    }
+}
+
+#[cfg(test)]
+mod float_pixel_tests {
     use super::*;
 
     impl FloatPixel {
