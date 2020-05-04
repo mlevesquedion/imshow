@@ -10,3 +10,7 @@ The terminal must support RGB ANSI sequences.
 * chunking: take crops instead of referencing each pixel separately?
 * chunks\_up\_to: loop up to max\_value instead of creating an intermediate vector?
 * chunks: use itertools?
+
+## Trivia
+
+The name is a reference to Matlab's imshow, which I know through matplotlib's (Python) imshow.
