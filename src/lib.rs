@@ -2,8 +2,9 @@ extern crate image;
 use ansi_term::Colour::RGB;
 use image::GenericImageView;
 
-mod utils;
-pub use utils::*;
+#[macro_use]
+mod math;
+pub use math::*;
 
 pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
     render(mean_pixels(im, display_dimension))
@@ -11,19 +12,19 @@ pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
 
 fn mean_pixels(im: image::DynamicImage, display_dimension: usize) -> Vec<Vec<(u8, u8, u8)>> {
     let (im_width, im_height) = im.dimensions();
-
-    let pixels_per_col = (im_width as f32 / display_dimension as f32).ceil() as usize;
-    let pixels_per_row = pixels_per_col * 2; // terminal cells are about twice as high as they are wide
+    let (im_width, im_height) = (im_width as f64, im_height as f64);
 
     let mut pixels: Vec<Vec<(u8, u8, u8)>> = Vec::new();
-    for row_indices in chunks_up_to(im_height, pixels_per_row).iter() {
+    // terminal cells are about twice as high as they are wide
+    for row_step in linspace!(0.0, im_height, display_dimension / 2) {
         let mut row_pixels: Vec<(u8, u8, u8)> = Vec::new();
-        for col_indices in chunks_up_to(im_width, pixels_per_col).iter() {
-            let mean_pixel = subimage_mean(&im, &row_indices, &col_indices);
+        for col_step in linspace!(0.0, im_width, display_dimension) {
+            let mean_pixel = subimage_mean(&im, &row_step, &col_step);
             row_pixels.push(mean_pixel);
         }
         pixels.push(row_pixels);
     }
+
     pixels
 }
 
@@ -42,87 +43,78 @@ fn render(pixels: Vec<Vec<(u8, u8, u8)>>) -> String {
 
 fn subimage_mean(
     im: &image::DynamicImage,
-    row_indices: &Vec<u32>,
-    col_indices: &Vec<u32>,
+    row_step: &(f64, f64),
+    col_step: &(f64, f64),
 ) -> (u8, u8, u8) {
-    let mut acc = PixelAccumulator::new();
-    for row in row_indices {
-        for col in col_indices {
-            acc.add(im.get_pixel(*col, *row).0);
+    let mut acc = FloatPixel::new();
+    for (row, row_weight) in weighted_indices(row_step.0, row_step.1) {
+        let mut row_acc = FloatPixel::new();
+        for (col, col_weight) in weighted_indices(col_step.0, col_step.1) {
+            row_acc.add_pixel(im.get_pixel(col as u32, row as u32).0, col_weight);
         }
+        acc.add_other(row_acc, row_weight);
     }
-    acc.mean()
+    acc.to_rgb()
 }
 
-struct PixelAccumulator {
-    red: u32,
-    green: u32,
-    blue: u32,
-    count: u32,
-}
+struct FloatPixel(f64, f64, f64);
 
-impl PixelAccumulator {
-    fn new() -> PixelAccumulator {
-        PixelAccumulator {
-            red: 0,
-            green: 0,
-            blue: 0,
-            count: 0,
-        }
+impl FloatPixel {
+    fn new() -> Self {
+        Self(0.0, 0.0, 0.0)
     }
 
-    fn add(&mut self, pixel: [u8; 4]) {
-        self.red += pixel[0] as u32;
-        self.green += pixel[1] as u32;
-        self.blue += pixel[2] as u32;
-        self.count += 1;
+    fn add_other(&mut self, pixel: Self, weight: f64) {
+        self.0 += pixel.0 * weight;
+        self.1 += pixel.1 * weight;
+        self.2 += pixel.2 * weight;
     }
 
-    fn mean(&self) -> (u8, u8, u8) {
-        assert!(
-            self.count > 0,
-            "tried to take the mean of an empty accumulator"
-        );
+    fn add_pixel(&mut self, pixel: [u8; 4], weight: f64) {
+        self.0 += pixel[0] as f64 * weight;
+        self.1 += pixel[1] as f64 * weight;
+        self.2 += pixel[2] as f64 * weight;
+    }
+
+    fn to_rgb(&self) -> (u8, u8, u8) {
         (
-            (self.red as f32 / self.count as f32).round() as u8,
-            (self.green as f32 / self.count as f32).round() as u8,
-            (self.blue as f32 / self.count as f32).round() as u8,
+            self.0.round() as u8,
+            self.1.round() as u8,
+            self.2.round() as u8,
         )
     }
 }
 
 #[cfg(test)]
-mod accumulator_tests {
+mod pixel_tests {
     use super::*;
 
-    #[test]
-    fn test_new_is_empty() {
-        let accumulator = PixelAccumulator::new();
-        assert_eq!(0, accumulator.red);
-        assert_eq!(0, accumulator.green);
-        assert_eq!(0, accumulator.blue);
-        assert_eq!(0, accumulator.count);
+    impl FloatPixel {
+        fn from(r: f64, g: f64, b: f64) -> Self {
+            Self(r, g, b)
+        }
     }
 
     #[test]
-    fn test_addition() {
-        let mut accumulator = PixelAccumulator::new();
-        accumulator.add([1, 2, 3, 0]);
-        assert_eq!(accumulator.mean(), (1, 2, 3));
+    fn test_new_is_zeros() {
+        let pixel = FloatPixel::new();
+        assert_eq!(0.0, pixel.0);
+        assert_eq!(0.0, pixel.1);
+        assert_eq!(0.0, pixel.2);
     }
 
     #[test]
-    fn test_mean() {
-        let mut accumulator = PixelAccumulator::new();
-        accumulator.add([1, 1, 0, 0]);
-        accumulator.add([1, 2, 0, 0]);
-        assert_eq!(accumulator.mean(), (1, 2, 0));
+    fn test_add_pixel() {
+        let mut fp = FloatPixel::new();
+        fp.add_pixel([255, 10, 62, 255], 0.5);
+        assert_eq!((128, 5, 31), fp.to_rgb());
     }
 
     #[test]
-    #[should_panic]
-    fn test_mean_panics_when_accumulator_is_empty() {
-        let accumulator = PixelAccumulator::new();
-        accumulator.mean();
+    fn test_add_other() {
+        let mut fp = FloatPixel::new();
+        let other = FloatPixel::from(120.0, 233.0, 180.0);
+        fp.add_other(other, 0.5);
+        assert_eq!((60, 117, 90), fp.to_rgb());
     }
 }
