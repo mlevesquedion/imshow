@@ -18,8 +18,9 @@ pub struct Dimensions {
 
 fn display_dimension(terminal: Dimensions, vertical: bool) -> usize {
     if vertical {
-        // terminal cells are about twice as high as they are wide
-        (terminal.height * 2).min(terminal.width)
+        // * 2 because terminal cells are about twice as high as they are wide
+        // + 1 because the prompt takes up one line
+        (terminal.height * 2 - 1).min(terminal.width)
     } else {
         terminal.width
     }
