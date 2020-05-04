@@ -5,13 +5,6 @@ use imshow::{show, Dimensions};
 
 use clap::{App, Arg};
 
-macro_rules! u32_pair {
-    ($t:expr) => {{
-        let (a, b) = $t;
-        (a as u32, b as u32)
-    }};
-}
-
 fn main() {
     let matches = App::new("imshow")
         .version("0.1")
@@ -25,14 +18,10 @@ fn main() {
         )
         .get_matches();
 
-    let paths = &matches.value_of("path");
+    let path = &matches.value_of("path").unwrap();
 
-    let term_dimensions =
-        Dimensions::from_width_height(u32_pair!(term_size::dimensions().unwrap()));
+    let (term_width, term_height) = term_size::dimensions().unwrap();
+    let term_dimensions = Dimensions::from_width_height((term_width as u32, term_height as u32));
 
-    println!("Terminal dimensions: {}", term_dimensions);
-
-    for p in paths.iter() {
-        show(image::open(p).unwrap(), &term_dimensions);
-    }
+    print!("{}", show(image::open(path).unwrap(), &term_dimensions));
 }
