@@ -53,15 +53,15 @@ fn weights(lo: f64, hi: f64) -> Vec<f64> {
         return vec![hi - lo];
     }
 
-    let mut weights = vec![lo.ceil() - lo];
-    let mut lo = lo.ceil() + 1.0;
+    let mut weights = vec![(lo + 1.0).floor() - lo];
+    let mut lo = (lo + 1.0).floor();
 
-    while lo < hi {
+    while (lo + 1.0) < hi {
         weights.push(1.0);
         lo += 1.0;
     }
 
-    weights.push(1.0 - (lo - hi));
+    weights.push(hi - lo);
 
     weights
 }
@@ -88,6 +88,16 @@ fn test_linspace() {
 fn test_normalized_by_sum() {
     let values = vec![10.0, 40.0];
     assert_eq!(vec![0.2, 0.8], normalized_by_sum(values));
+}
+
+#[test]
+fn test_weights_and_indices_have_same_length() {
+    let bounds = vec![(0.0, 4.733333333333333), (0.2, 10.5)];
+    for b in bounds {
+        let weights = weights(b.0, b.1);
+        let indices = indices(b.0, b.1);
+        assert_eq!(weights.len(), indices.len());
+    }
 }
 
 #[cfg(test)]
@@ -117,11 +127,17 @@ mod weights_tests {
         let expected = vec![0.6, 1.0, 1.0, 0.2];
         let actual = weights(bounds.0, bounds.1);
 
-        println!("{:?}", actual);
-
         for (e, a) in expected.iter().zip(actual.iter()) {
             assert_float_eq!(e, a, format!("{} != {}", e, a));
         }
+    }
+
+    #[test]
+    fn test_many_weights_starting_at_0() {
+        let bounds = (0.0, 4.7);
+        let expected = vec![1.0, 1.0, 1.0, 1.0, 0.7];
+        let actual = weights(bounds.0, bounds.1);
+        assert_float_eq!(expected[0], actual[0]);
     }
 }
 

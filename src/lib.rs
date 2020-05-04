@@ -13,6 +13,7 @@ pub struct Dimensions {
 
 pub fn show(im: image::DynamicImage, terminal: Dimensions, no_scroll: bool) -> String {
     let display_dimension = if no_scroll {
+        // terminal cells are about twice as high as they are wide
         terminal.height * 2
     } else {
         terminal.width

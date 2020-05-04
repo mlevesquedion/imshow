@@ -2,10 +2,11 @@
 
 A command line tool to display images in the terminal.
 
-The terminal must support RGB ANSI sequences.
+The terminal must support ANSI RGB sequences.
 
 ## TODO
-* Investigate weird dark vertical line artifacts (low weights?)
+* Handle terminal cell size better (about twice as high as wide)
+* Introduce property-based tests where appropriate (lengths, normalized\_by\_sum)
 * Take alpha channel into account
 
 ## Trivia
