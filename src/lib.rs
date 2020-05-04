@@ -11,14 +11,25 @@ pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
     let pixels_per_col = (im_width as f32 / display_dimension as f32).ceil() as usize;
     let pixels_per_row = pixels_per_col * 2; // terminal cells are about twice as high as they are wide
 
-    let mut rendering = String::new();
-
+    let mut pixels: Vec<Vec<(u8, u8, u8)>> = Vec::new();
     for row_indices in chunks_up_to(im_height, pixels_per_row).iter() {
+        let mut row_pixels: Vec<(u8, u8, u8)> = Vec::new();
         for col_indices in chunks_up_to(im_width, pixels_per_col).iter() {
             let mean_pixel = subimage_mean(&im, &row_indices, &col_indices);
-            rendering += &RGB(mean_pixel.0, mean_pixel.1, mean_pixel.2)
-                .paint("█")
-                .to_string();
+            row_pixels.push(mean_pixel);
+        }
+        pixels.push(row_pixels);
+    }
+
+    render(pixels)
+}
+
+fn render(pixels: Vec<Vec<(u8, u8, u8)>>) -> String {
+    let mut rendering = String::new();
+
+    for pixel_row in pixels {
+        for pixel in pixel_row {
+            rendering += &RGB(pixel.0, pixel.1, pixel.2).paint("█").to_string();
         }
         rendering.push('\n');
     }
