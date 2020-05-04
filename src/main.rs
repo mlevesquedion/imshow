@@ -1,17 +1,17 @@
 extern crate image;
 extern crate term_size;
 
-use clap::{App, Arg};
+use clap;
 
 use imshow::show;
 use imshow::Dimensions;
 
 fn main() {
-    let matches = App::new("imshow")
-        .version("0.1")
+    let matches = clap::App::new("imshow")
+        .version(clap::crate_version!())
         .about("Show images in the terminal.")
         .arg(
-            Arg::with_name("path")
+            clap::Arg::with_name("path")
                 .help("Path of the image file to show.")
                 .short("f")
                 .long("file")
@@ -19,7 +19,7 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vertical")
+            clap::Arg::with_name("vertical")
                 .help("Fill the terminal's height. (otherwise, fills the terminal's width)")
                 .short("v")
                 .long("vertical")
