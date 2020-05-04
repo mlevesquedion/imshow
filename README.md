@@ -13,6 +13,7 @@ The terminal must support ANSI RGB sequences.
 ## Similar Projects
 * [viu](https://github.com/atanunq/viu)
 * [termimage](https://github.com/nabijaczleweli/termimage)
+* [termpix](https://github.com/hopey-dishwasher/termpix)
 
 ## Trivia
 
