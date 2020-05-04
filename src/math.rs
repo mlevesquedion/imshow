@@ -87,8 +87,7 @@ fn indices(lo: f64, hi: f64) -> Vec<usize> {
     indices
 }
 
-// used in tests
-#[allow(unused_macros)]
+#[cfg(test)]
 macro_rules! assert_float_eq {
     ($x:expr, $y:expr) => {
         assert!(($x - $y).abs() <= f64::EPSILON)
