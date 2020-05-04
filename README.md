@@ -10,6 +10,10 @@ The terminal must support ANSI RGB sequences.
 * Introduce property-based tests where appropriate (lengths, normalized\_by\_sum)
 * Take alpha channel into account
 
+## Similar Projects
+* [viu](https://github.com/atanunq/viu)
+* [termimage](https://github.com/nabijaczleweli/termimage)
+
 ## Trivia
 
 The name is a reference to Matlab's imshow, which I know through matplotlib's (Python) imshow.
