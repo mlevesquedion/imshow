@@ -5,17 +5,16 @@ use image::GenericImageView;
 mod utils;
 pub use utils::*;
 
-pub fn show(im: image::DynamicImage, display_dimensions: &Dimensions) -> String {
-    let im_dimensions = Dimensions::from_width_height(im.dimensions());
+pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
+    let (im_width, im_height) = im.dimensions();
 
-    let pixels_per_col =
-        (im_dimensions.width as f32 / display_dimensions.width as f32).ceil() as usize;
+    let pixels_per_col = (im_width as f32 / display_dimension as f32).ceil() as usize;
     let pixels_per_row = pixels_per_col * 2; // terminal cells are about twice as high as they are wide
 
     let mut rendering = String::new();
 
-    for row_indices in chunks_up_to(im_dimensions.height, pixels_per_row).iter() {
-        for col_indices in chunks_up_to(im_dimensions.width, pixels_per_col).iter() {
+    for row_indices in chunks_up_to(im_height, pixels_per_row).iter() {
+        for col_indices in chunks_up_to(im_width, pixels_per_col).iter() {
             let mean_pixel = subimage_mean(&im, &row_indices, &col_indices);
             rendering += &RGB(mean_pixel.0, mean_pixel.1, mean_pixel.2)
                 .paint("█")
@@ -111,30 +110,5 @@ mod accumulator_tests {
     fn test_mean_panics_when_accumulator_is_empty() {
         let accumulator = PixelAccumulator::new();
         accumulator.mean();
-    }
-}
-
-pub struct Dimensions {
-    height: u32,
-    width: u32,
-}
-
-impl Dimensions {
-    pub fn from_width_height(pair: (u32, u32)) -> Dimensions {
-        let (width, height) = pair;
-        Dimensions { height, width }
-    }
-}
-
-#[cfg(test)]
-mod dimensions_tests {
-    use super::*;
-
-    #[test]
-    fn test_from_width_height() {
-        let (width, height) = (1, 2);
-        let dimensions = Dimensions::from_width_height((width, height));
-        assert_eq!(width, dimensions.width);
-        assert_eq!(height, dimensions.height);
     }
 }
