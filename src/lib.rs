@@ -6,7 +6,18 @@ use image::GenericImageView;
 mod math;
 pub use math::*;
 
-pub fn show(im: image::DynamicImage, display_dimension: usize) -> String {
+pub struct Dimensions {
+    pub width: usize,
+    pub height: usize,
+}
+
+pub fn show(im: image::DynamicImage, terminal: Dimensions, no_scroll: bool) -> String {
+    let display_dimension = if no_scroll {
+        terminal.height * 2
+    } else {
+        terminal.width
+    };
+
     render(mean_pixels(im, display_dimension))
 }
 

@@ -1,9 +1,10 @@
 extern crate image;
 extern crate term_size;
 
-use imshow::show;
-
 use clap::{App, Arg};
+
+use imshow::show;
+use imshow::Dimensions;
 
 fn main() {
     let matches = App::new("imshow")
@@ -28,9 +29,11 @@ fn main() {
 
     let no_scroll = matches.is_present("no_scroll");
 
-    let (term_width, term_height) = term_size::dimensions().unwrap();
+    let (width, height) = term_size::dimensions().unwrap();
+    let term_dimensions = Dimensions { width, height };
 
-    let term_dimension = if no_scroll { term_height } else { term_width };
-
-    print!("{}", show(image::open(path).unwrap(), term_dimension));
+    print!(
+        "{}",
+        show(image::open(path).unwrap(), term_dimensions, no_scroll)
+    );
 }
