@@ -10,6 +10,8 @@ pub struct Linspace {
     current: f64,
     target: f64,
     step: f64,
+    count: usize,
+    target_count: usize,
 }
 
 impl Linspace {
@@ -18,6 +20,8 @@ impl Linspace {
             current: from,
             target: to,
             step: to / count as f64,
+            count: 0,
+            target_count: count,
         }
     }
 }
@@ -26,11 +30,17 @@ impl Iterator for Linspace {
     type Item = (f64, f64);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if (self.current + self.step) > self.target {
+        if self.count == self.target_count {
             None
+        } else if self.count + 1 == self.target_count {
+            let val = (self.current, self.target);
+            self.current += self.step;
+            self.count += 1;
+            Some(val)
         } else {
             let val = (self.current, self.current + self.step);
             self.current += self.step;
+            self.count += 1;
             Some(val)
         }
     }
@@ -88,11 +98,23 @@ macro_rules! assert_float_eq {
     };
 }
 
-#[test]
-fn test_linspace() {
-    let steps: Vec<(f64, f64)> = linspace!(0.0, 10.0, 4).collect();
-    let expected = vec![(0.0, 2.5), (2.5, 5.0), (5.0, 7.5), (7.5, 10.0)];
-    assert_eq!(expected, steps);
+#[cfg(test)]
+mod linspace_tests {
+    use super::*;
+
+    #[test]
+    fn test_result_length_equals_count() {
+        let count = 138;
+        let steps = linspace!(0.0, 11.0, count);
+        assert_eq!(count, steps.count());
+    }
+
+    #[test]
+    fn test_produces_correct_values() {
+        let steps: Vec<(f64, f64)> = linspace!(0.0, 10.0, 4).collect();
+        let expected = vec![(0.0, 2.5), (2.5, 5.0), (5.0, 7.5), (7.5, 10.0)];
+        assert_eq!(expected, steps);
+    }
 }
 
 #[cfg(test)]
