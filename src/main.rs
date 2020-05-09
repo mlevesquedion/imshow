@@ -28,10 +28,13 @@ fn main() {
     let path = matches.value_of("path").unwrap();
     let vertical = matches.is_present("vertical");
 
-    let (width, height) = term_size::dimensions().unwrap();
-    let term_dimensions = Dimensions { width, height };
+    let (terminal_width, terminal_height) = term_size::dimensions().unwrap();
+    let terminal_dimensions = Dimensions {
+        width: terminal_width as u32,
+        height: terminal_height as u32,
+    };
 
     let image = image::open(path).unwrap();
 
-    print!("{}", show(image, term_dimensions, vertical));
+    print!("{}", show(image, terminal_dimensions, vertical));
 }

@@ -5,11 +5,9 @@ A command line tool to display images in the terminal.
 The terminal must support ANSI RGB sequences.
 
 ## TODO
-* Use half-blocks instead of full-blocks
-* Improve performance (profile with criterion first; slow on large images; use Iterators everywhere + rayon?)
-* Encapsulate terminal cell size handling (about twice as high as wide)
-* Introduce property-based tests where appropriate (lengths, normalized\_by\_sum)
+* Encapsulate terminal cell size handling (height has to be even)
 * Take alpha channel into account
+* Bench + Profile + improve performance if necessary
 
 ## Similar Projects
 * [viu](https://github.com/atanunq/viu)

@@ -2,167 +2,182 @@ extern crate image;
 use ansi_term::Colour::RGB;
 use image::GenericImageView;
 
-#[macro_use]
-mod math;
-pub use math::*;
+use rayon::prelude::*;
 
-pub fn show(im: image::DynamicImage, terminal_dimensions: Dimensions, vertical: bool) -> String {
-    let display_dimension = display_dimension(terminal_dimensions, vertical);
-    render(mean_pixels(im, display_dimension))
+pub fn show(image: image::DynamicImage, terminal_dimensions: Dimensions, vertical: bool) -> String {
+    let resized_image = resize_image(image, terminal_dimensions, vertical);
+    render(resized_image)
 }
 
+fn resize_image(
+    image: image::DynamicImage,
+    terminal_dimensions: Dimensions,
+    vertical: bool,
+) -> image::DynamicImage {
+    let (image_width, image_height) = image.dimensions();
+    let image_dimensions = Dimensions {
+        width: image_width,
+        height: image_height,
+    };
+
+    let target_dimensions = resizing_dimensions(image_dimensions, terminal_dimensions, vertical);
+    image.resize_exact(
+        target_dimensions.width,
+        target_dimensions.height,
+        image::imageops::Gaussian,
+    )
+}
+
+fn render(image: image::DynamicImage) -> String {
+    let (image_width, image_height) = image.dimensions();
+
+    (0..image_height)
+        .collect::<Vec<_>>()
+        .par_iter()
+        .chunks(2)
+        .map(|row_pair| {
+            let top_row = *row_pair[0];
+            let bottom_row = *row_pair[1];
+            (0..image_width)
+                .map(|col| paint_pixel(&image, top_row as u32, bottom_row as u32, col as u32))
+                .collect::<Vec<_>>()
+                .join("")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn paint_pixel(image: &image::DynamicImage, top_row: u32, bottom_row: u32, col: u32) -> String {
+    let top_pixel = image.get_pixel(col, top_row).0;
+    let bottom_pixel = image.get_pixel(col, bottom_row).0;
+    RGB(bottom_pixel[0], bottom_pixel[1], bottom_pixel[2])
+        .on(RGB(top_pixel[0], top_pixel[1], top_pixel[2]))
+        .paint("▄")
+        .to_string()
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Dimensions {
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
 }
 
-fn display_dimension(terminal: Dimensions, vertical: bool) -> usize {
+fn resizing_dimensions(
+    image_dimensions: Dimensions,
+    terminal_dimensions: Dimensions,
+    vertical: bool,
+) -> Dimensions {
+    let mut width: u32;
+    let mut height: u32;
     if vertical {
-        // * 2 because terminal cells are about twice as high as they are wide
-        // + 1 because the prompt takes up one line
-        (terminal.height * 2 - 1).min(terminal.width)
+        height = (terminal_dimensions.height - 1) * 2;
+        width = cross(image_dimensions.width, image_dimensions.height, height);
+        if width > terminal_dimensions.width {
+            println!("{}", 1);
+            width = terminal_dimensions.width;
+            height = previous_even(cross(
+                image_dimensions.height,
+                image_dimensions.width,
+                width,
+            ));
+        }
     } else {
-        terminal.width
+        width = terminal_dimensions.width;
+        height = previous_even(cross(
+            image_dimensions.height,
+            image_dimensions.width,
+            width,
+        ));
     }
+
+    Dimensions { width, height }
 }
 
-fn mean_pixels(im: image::DynamicImage, display_dimension: usize) -> Vec<Vec<(u8, u8, u8)>> {
-    let (im_width, im_height) = im.dimensions();
-    let (im_width, im_height) = (im_width as f64, im_height as f64);
-
-    let mut pixels: Vec<Vec<(u8, u8, u8)>> = Vec::new();
-    // terminal cells are about twice as high as they are wide
-    for row_step in linspace!(0.0, im_height, display_dimension / 2) {
-        let mut row_pixels: Vec<(u8, u8, u8)> = Vec::new();
-        for col_step in linspace!(0.0, im_width, display_dimension) {
-            let mean_pixel = subimage_mean(&im, &row_step, &col_step);
-            row_pixels.push(mean_pixel);
-        }
-        pixels.push(row_pixels);
-    }
-
-    pixels
-}
-
-fn render(pixels: Vec<Vec<(u8, u8, u8)>>) -> String {
-    let mut rendering = String::new();
-
-    for pixel_row in pixels {
-        for pixel in pixel_row {
-            rendering += &RGB(pixel.0, pixel.1, pixel.2).paint("█").to_string();
-        }
-        rendering.push('\n');
-    }
-
-    rendering
-}
-
-fn subimage_mean(
-    im: &image::DynamicImage,
-    row_step: &(f64, f64),
-    col_step: &(f64, f64),
-) -> (u8, u8, u8) {
-    let mut acc = FloatPixel::new();
-    for (row, row_weight) in weighted_indices(row_step.0, row_step.1) {
-        let mut row_acc = FloatPixel::new();
-        for (col, col_weight) in weighted_indices(col_step.0, col_step.1) {
-            row_acc.add_pixel(im.get_pixel(col as u32, row as u32).0, col_weight);
-        }
-        acc.add_other(row_acc, row_weight);
-    }
-    acc.to_rgb()
-}
-
-struct FloatPixel(f64, f64, f64);
-
-impl FloatPixel {
-    fn new() -> Self {
-        Self(0.0, 0.0, 0.0)
-    }
-
-    fn add_other(&mut self, pixel: Self, weight: f64) {
-        self.0 += pixel.0 * weight;
-        self.1 += pixel.1 * weight;
-        self.2 += pixel.2 * weight;
-    }
-
-    fn add_pixel(&mut self, pixel: [u8; 4], weight: f64) {
-        self.0 += pixel[0] as f64 * weight;
-        self.1 += pixel[1] as f64 * weight;
-        self.2 += pixel[2] as f64 * weight;
-    }
-
-    fn to_rgb(&self) -> (u8, u8, u8) {
-        (
-            self.0.round() as u8,
-            self.1.round() as u8,
-            self.2.round() as u8,
-        )
+fn previous_even(n: u32) -> u32 {
+    if n % 2 == 0 {
+        n
+    } else {
+        n - 1
     }
 }
 
 #[cfg(test)]
-mod display_dimension_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_uses_terminal_width_when_not_vertical() {
-        let terminal_dimensions = Dimensions {
-            width: 10,
-            height: 20,
-        };
-        assert_eq!(10, display_dimension(terminal_dimensions, false));
+    fn test_when_input_is_even_then_returns_input() {
+        assert_eq!(previous_even(12), 12);
     }
 
     #[test]
-    fn test_uses_twice_terminal_height_when_vertical() {
-        let terminal_dimensions = Dimensions {
-            width: 50,
-            height: 20,
-        };
-        assert_eq!(40, display_dimension(terminal_dimensions, true));
-    }
-
-    #[test]
-    fn test_uses_terminal_width_when_vertical_and_twice_terminal_height_is_greater_than_width() {
-        let terminal_dimensions = Dimensions {
-            width: 30,
-            height: 20,
-        };
-        assert_eq!(30, display_dimension(terminal_dimensions, true));
+    fn test_when_input_is_odd_then_returns_previous_even() {
+        assert_eq!(previous_even(11), 10);
     }
 }
 
+fn cross(a: u32, b: u32, d: u32) -> u32 {
+    ((a as f32 / b as f32) * d as f32).ceil() as u32
+}
+
 #[cfg(test)]
-mod float_pixel_tests {
+mod resizing_dimensions_tests {
     use super::*;
 
-    impl FloatPixel {
-        fn from(r: f64, g: f64, b: f64) -> Self {
-            Self(r, g, b)
-        }
+    #[test]
+    fn test_vertical_resizing() {
+        let image_dimensions = Dimensions {
+            width: 250,
+            height: 300,
+        };
+        let terminal_dimensions = Dimensions {
+            width: 200,
+            height: 100,
+        };
+        assert_eq!(
+            resizing_dimensions(image_dimensions, terminal_dimensions, true),
+            Dimensions {
+                width: 165,
+                height: 198
+            }
+        );
     }
 
     #[test]
-    fn test_new_is_zeros() {
-        let pixel = FloatPixel::new();
-        assert_eq!(0.0, pixel.0);
-        assert_eq!(0.0, pixel.1);
-        assert_eq!(0.0, pixel.2);
+    fn test_vertical_resizing_too_wide() {
+        let image_dimensions = Dimensions {
+            width: 500,
+            height: 300,
+        };
+        let terminal_dimensions = Dimensions {
+            width: 200,
+            height: 100,
+        };
+        assert_eq!(
+            resizing_dimensions(image_dimensions, terminal_dimensions, true),
+            Dimensions {
+                width: 200,
+                height: 120
+            }
+        );
     }
 
     #[test]
-    fn test_add_pixel() {
-        let mut fp = FloatPixel::new();
-        fp.add_pixel([255, 10, 62, 255], 0.5);
-        assert_eq!((128, 5, 31), fp.to_rgb());
-    }
-
-    #[test]
-    fn test_add_other() {
-        let mut fp = FloatPixel::new();
-        let other = FloatPixel::from(120.0, 233.0, 180.0);
-        fp.add_other(other, 0.5);
-        assert_eq!((60, 117, 90), fp.to_rgb());
+    fn test_non_vertical() {
+        let image_dimensions = Dimensions {
+            width: 250,
+            height: 300,
+        };
+        let terminal_dimensions = Dimensions {
+            width: 200,
+            height: 100,
+        };
+        assert_eq!(
+            resizing_dimensions(image_dimensions, terminal_dimensions, false),
+            Dimensions {
+                width: 200,
+                height: 240
+            }
+        );
     }
 }
