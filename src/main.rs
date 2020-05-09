@@ -36,5 +36,5 @@ fn main() {
 
     let image = image::open(path).unwrap();
 
-    print!("{}", show(image, terminal_dimensions, vertical));
+    println!("{}", show(image, terminal_dimensions, vertical));
 }
