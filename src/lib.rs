@@ -5,8 +5,7 @@ use image::GenericImageView;
 use rayon::prelude::*;
 
 pub fn show(image: image::DynamicImage, terminal_dimensions: Dimensions, vertical: bool) -> String {
-    let resized_image = resize_image(image, terminal_dimensions, vertical);
-    render(resized_image)
+    render(resize_image(image, terminal_dimensions, vertical))
 }
 
 fn resize_image(
@@ -118,6 +117,11 @@ mod tests {
 
 fn cross(a: u32, b: u32, d: u32) -> u32 {
     ((a as f32 / b as f32) * d as f32).ceil() as u32
+}
+
+#[test]
+fn test_cross() {
+    assert_eq!(cross(10, 20, 3), 2);
 }
 
 #[cfg(test)]
