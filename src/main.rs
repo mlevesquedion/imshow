@@ -1,8 +1,6 @@
 extern crate image;
 extern crate term_size;
 
-use clap;
-
 use imshow::show;
 use imshow::Dimensions;
 
