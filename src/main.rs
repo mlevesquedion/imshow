@@ -31,8 +31,7 @@ fn main() {
     let (width, height) = term_size::dimensions().unwrap();
     let term_dimensions = Dimensions { width, height };
 
-    print!(
-        "{}",
-        show(image::open(path).unwrap(), term_dimensions, vertical)
-    );
+    let image = image::open(path).unwrap();
+
+    print!("{}", show(image, term_dimensions, vertical));
 }
