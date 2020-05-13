@@ -72,7 +72,6 @@ fn resizing_dimensions(
         height = (terminal_dimensions.height - 1) * 2;
         width = cross(image_dimensions.width, image_dimensions.height, height);
         if width > terminal_dimensions.width {
-            println!("{}", 1);
             width = terminal_dimensions.width;
             height = previous_even(cross(
                 image_dimensions.height,
